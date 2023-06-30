@@ -60,7 +60,7 @@ fun AnalyzeEmotionScreen(
         }
     }
 
-    var emojiEmotion by remember { mutableStateOf("") }
+    var emojiEmotion by remember { mutableStateOf(0) }
     var activity by remember { mutableStateOf("") }
     var primaryEmotionSaved by remember { mutableStateOf("") }
     var secondaryEmotionSaved by remember { mutableStateOf("") }
@@ -81,27 +81,27 @@ fun AnalyzeEmotionScreen(
         )
         Row(modifier = Modifier.padding(horizontal =47.dp)) {
             EmotionImage(painterResource(R.drawable.happy), "Image 1") {
-                emojiEmotion = "Happy"
+                emojiEmotion = R.drawable.happy
             }
             EmotionImage(painterResource(R.drawable.sad), "Image 2") {
-                emojiEmotion = "Sad"
+                emojiEmotion = R.drawable.sad
             }
             EmotionImage(painterResource(R.drawable.verysad), "Image 3") {
-                emojiEmotion = "Very Sad"
+                emojiEmotion = R.drawable.verysad
             }
             EmotionImage(painterResource(R.drawable.angry), "Image 4") {
-                emojiEmotion = "Angry"
+                emojiEmotion = R.drawable.angry
             }
         }
         Row(modifier = Modifier.padding(horizontal = 80.dp)) {
             EmotionImage(painterResource(R.drawable.pleased), "Image 5") {
-                emojiEmotion = "Pleased"
+                emojiEmotion = R.drawable.pleased
             }
             EmotionImage(painterResource(R.drawable.pissed), "Image 6") {
-                emojiEmotion = "Pissed"
+                emojiEmotion = R.drawable.pissed
             }
             EmotionImage(painterResource(R.drawable.indifferent), "Image 7") {
-                emojiEmotion = "Indifferent"
+                emojiEmotion = R.drawable.indifferent
             }
         }
 
@@ -216,7 +216,6 @@ fun AnalyzeEmotionScreen(
 
         Button(
             onClick = {
-                // Handle save logic
                 val date: Date = com.google.firebase.Timestamp.now().toDate()
                 val dateFormat: DateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
                 val formattedDate: String = dateFormat.format(date)

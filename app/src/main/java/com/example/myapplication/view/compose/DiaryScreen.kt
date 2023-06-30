@@ -1,6 +1,8 @@
 package com.example.myapplication.view.compose
 
 import android.os.Build
+import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -17,54 +19,49 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.myapplication.R
+import com.example.myapplication.data.model.DiaryEntry
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 data class CardItem(
-    val imageResource: Int,
-    val emoji: String,
+    val emojiImage: Int,
     val date: LocalDate,
     val emotionalState: String,
-    val activities: List<String>,
+    val activities: String,
     val description: String,
     val primary: String
 )
-
-@RequiresApi(Build.VERSION_CODES.O)
-val cardItems = listOf(
-    CardItem(
-        imageResource = R.drawable.happy,
-        emoji = "😄",
-        date = LocalDate.now(),
-        emotionalState = "Happy",
-        activities = listOf("Picnic", "Walk in the park"),
-        description = "Good day",
-        primary = "Happiness"
-    ),
-    CardItem(
-        imageResource = R.drawable.sad,
-        emoji = "😢",
-        date = LocalDate.now().minusDays(1),
-        emotionalState = "Sad",
-        activities = listOf("Exam", "Hard work"),
-        description = "Hard and tiring day",
-        primary = "Sadness"
-    )
-)
+val LocalAppContext = staticCompositionLocalOf<android.content.Context> {
+    error("No app context provided")
+}
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CardList(
     navController: NavController
 ) {
+
+    var diaryEntries by remember { mutableStateOf(emptyList<DiaryEntry>()) }
+
+    val appContext = LocalAppContext.current
+
+    LaunchedEffect(Unit) {
+        fetchDiaryEntriesFromFirestore()?.let { fetchedEntries ->
+            diaryEntries = fetchedEntries
+        }
+    }
+
     LazyColumn {
-        items(cardItems) { cardItem ->
+        items(diaryEntries) { cardItem ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -73,51 +70,63 @@ fun CardList(
                 elevation = 4.dp
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = cardItem.imageResource),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(96.dp)
-                            .clip(shape = MaterialTheme.shapes.medium),
-                        contentScale = ContentScale.Crop
-                    )
+                    cardItem.emojiEmotion?.let {
+                        painterResource(
+                            id = cardItem.emojiEmotion
+                        )
+                    }?.let {
+                        Image(
+                            painter = it,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(96.dp)
+                                .clip(shape = MaterialTheme.shapes.medium),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        Text(
-                            text = cardItem.date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
-                            style = MaterialTheme.typography.subtitle1
-                        )
+                        cardItem.timestamp?.let {
+                            Text(
+                                text = cardItem.timestamp.toString(),
+                                style = MaterialTheme.typography.subtitle1
+                            )
+                        }
                         Spacer(modifier = Modifier.height(4.dp))
+//                        Text(
+//                            text = cardItem.,
+//                            style = MaterialTheme.typography.subtitle2,
+//                            color = colorResource(id = R.color.teal_700)
+//                        )
                         Text(
-                            text = cardItem.emotionalState,
+                            text = "Primary emotion: ${cardItem.primaryEmotion}",
                             style = MaterialTheme.typography.subtitle2,
                             color = colorResource(id = R.color.teal_700)
                         )
                         Text(
-                            text = "Primary emotion: ${cardItem.primary}",
-                            style = MaterialTheme.typography.subtitle2,
-                            color = colorResource(id = R.color.teal_700)
-                        )
-                        Text(
-                            text = "Secondary emotion: Unknown",
+                            text = "Secondary emotion: ${cardItem.secondaryEmotion}",
                             style = MaterialTheme.typography.subtitle2,
                             color = colorResource(id = R.color.teal_700)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = cardItem.activities.joinToString(", "),
-                            style = MaterialTheme.typography.body1,
-                            color = MaterialTheme.colors.secondaryVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        cardItem.activity?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.body1,
+                                color = MaterialTheme.colors.secondaryVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = cardItem.description,
-                            style = MaterialTheme.typography.body2,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        cardItem.description?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.body2,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     IconButton(
@@ -143,23 +152,42 @@ fun CardList(
         ) {
 
             BottomNavigationItem(
-                icon = { Icon(Icons.Default.Home, contentDescription = "Home", tint =Color.White) },
+                icon = {
+                    Icon(
+                        Icons.Default.Home,
+                        contentDescription = "Home",
+                        tint = Color.White
+                    )
+                },
                 label = { Text("Home", color = Color.White) },
                 selected = selectedItem == 0,
-                onClick = { selectedItem = 0
-                    navController.navigate("notificationScreen")
+                onClick = {
+                    selectedItem = 0
+                    navController.navigate("analyzeEmotionScreen")
                 }
             )
 
             BottomNavigationItem(
-                icon = { Icon(Icons.Default.MenuBook, contentDescription = "Diary", tint =Color.White) },
+                icon = {
+                    Icon(
+                        Icons.Default.MenuBook,
+                        contentDescription = "Diary",
+                        tint = Color.White
+                    )
+                },
                 label = { Text("Diary", color = Color.White) },
                 selected = selectedItem == 1,
                 onClick = { selectedItem = 1 }
             )
 
             BottomNavigationItem(
-                icon = { Icon(Icons.Default.Settings, contentDescription = "Settings", tint =Color.White) },
+                icon = {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = Color.White
+                    )
+                },
                 label = { Text("Settings", color = Color.White) },
                 selected = selectedItem == 2,
                 onClick = {
@@ -183,5 +211,33 @@ fun CardList(
             )
         }
     }
-
 }
+
+private suspend fun fetchDiaryEntriesFromFirestore(): List<DiaryEntry>? {
+    return try {
+        val firestore = FirebaseFirestore.getInstance()
+        val snapshot = firestore.collection("diaryEntries").get().await()
+        val entries = snapshot.toObjects(DiaryEntry::class.java)
+        entries
+    } catch (e: Exception) {
+        Log.d("FETCHING FROM FIREBASE" , "not fetched from diaryEntries", e)
+        // Handle any exceptions that
+        // occur during fetching
+        null
+    }
+}
+
+@Composable
+fun ProvideAppContext(
+    context: android.content.Context,
+    content: @Composable () -> Unit
+) {
+    val appContext = remember(context) { context.applicationContext }
+    CompositionLocalProvider(LocalAppContext provides appContext) {
+        content()
+    }
+}
+
+
+
+

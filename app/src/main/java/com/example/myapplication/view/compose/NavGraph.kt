@@ -5,6 +5,7 @@ import com.example.myapplication.NotificationViewModel
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -53,6 +54,8 @@ fun NavGraph(loginViewModel: LoginViewModel,
             NotificationScreen(notificationViewModel, loginViewModel, navController)
         }
         composable("diaryScreen") {
-            CardList(navController)
+            ProvideAppContext(LocalContext.current) {
+                CardList(navController)
+            }
         }
 }}
