@@ -7,8 +7,11 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 
 class DiaryViewModel(private val repository: DiaryRepository) : ViewModel() {
+    private var index = 0
 
     fun saveDiaryEntry(entry: DiaryEntry) {
+        entry.id = index
+        index ++
         repository.saveDiaryEntry(entry)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())

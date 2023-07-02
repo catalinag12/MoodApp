@@ -58,4 +58,28 @@ fun NavGraph(loginViewModel: LoginViewModel,
                 CardList(navController)
             }
         }
-}}
+
+        composable(
+            "editScreen/{index}/{timestamp}/{emojiEmotion}/{primaryEmotion}/{secondaryEmotion}/{activity}/{description}",
+            arguments = listOf(
+                navArgument("index") { type = NavType.IntType },
+                navArgument("timestamp") { type = NavType.StringType },
+                navArgument("emojiEmotion") { type = NavType.IntType },
+                navArgument("primaryEmotion") { type = NavType.StringType },
+                navArgument("secondaryEmotion") { type = NavType.StringType },
+                navArgument("activity") { type = NavType.StringType },
+                navArgument("description") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val index = backStackEntry.arguments?.getInt("index") ?: 0
+            val timestamp = backStackEntry.arguments?.getString("timestamp") ?: ""
+            val emojiEmotion = backStackEntry.arguments?.getInt("emojiEmotion") ?: 0
+            val primaryEmotion = backStackEntry.arguments?.getString("primaryEmotion") ?: ""
+            val secondaryEmotion = backStackEntry.arguments?.getString("secondaryEmotion") ?: ""
+            val activity = backStackEntry.arguments?.getString("activity") ?: ""
+            val description = backStackEntry.arguments?.getString("description") ?: ""
+
+            EditScreen(index = index, timestamp, emojiEmotion, primaryEmotion, secondaryEmotion, activity, description = description, navController = navController)
+        }
+
+    }}

@@ -4,6 +4,7 @@ import com.google.firebase.Timestamp
 
 
 data class DiaryEntry(
+    var id: Int? = null,
     val emojiEmotion: Int? = null,
     val activity: String? = null,
     val primaryEmotion: String? = null,
@@ -12,5 +13,5 @@ data class DiaryEntry(
     val timestamp: String? = null
 )
  {
-    constructor() : this(null, null, null, null, null, null)
+    constructor() : this(null, null, null, null, null, null, null)
 }

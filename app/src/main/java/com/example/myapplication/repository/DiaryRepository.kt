@@ -9,7 +9,8 @@ class DiaryRepository(private val firestore: FirebaseFirestore) {
     fun saveDiaryEntry(entry: DiaryEntry): Completable {
         return Completable.create { emitter ->
             firestore.collection("diaryEntries")
-                .add(entry)
+                .document(entry.id.toString())
+                .set(entry)
                 .addOnSuccessListener { documentReference ->
                     emitter.onComplete()
                 }

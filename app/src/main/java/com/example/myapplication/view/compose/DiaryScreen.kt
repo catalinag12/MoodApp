@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -32,14 +33,6 @@ import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-data class CardItem(
-    val emojiImage: Int,
-    val date: LocalDate,
-    val emotionalState: String,
-    val activities: String,
-    val description: String,
-    val primary: String
-)
 val LocalAppContext = staticCompositionLocalOf<android.content.Context> {
     error("No app context provided")
 }
@@ -49,8 +42,9 @@ val LocalAppContext = staticCompositionLocalOf<android.content.Context> {
 fun CardList(
     navController: NavController
 ) {
-
     var diaryEntries by remember { mutableStateOf(emptyList<DiaryEntry>()) }
+    var sortedEntries by remember { mutableStateOf(emptyList<DiaryEntry>()) }
+    var isSorted by remember { mutableStateOf(false) }
 
     val appContext = LocalAppContext.current
 
@@ -60,8 +54,12 @@ fun CardList(
         }
     }
 
-    LazyColumn {
-        items(diaryEntries) { cardItem ->
+    if (isSorted) {
+        sortedEntries = sortDiaryEntriesByTimestamp(diaryEntries)
+    }
+
+    LazyColumn(modifier = Modifier.padding(bottom = 130.dp)) {
+        itemsIndexed(if (isSorted) sortedEntries else diaryEntries) { index, cardItem ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -69,11 +67,12 @@ fun CardList(
                     .clickable { /* Handle card click event */ },
                 elevation = 4.dp
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                ) {
                     cardItem.emojiEmotion?.let {
-                        painterResource(
-                            id = cardItem.emojiEmotion
-                        )
+                        painterResource(id = cardItem.emojiEmotion)
                     }?.let {
                         Image(
                             painter = it,
@@ -85,19 +84,28 @@ fun CardList(
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        cardItem.timestamp?.let {
-                            Text(
-                                text = cardItem.timestamp.toString(),
-                                style = MaterialTheme.typography.subtitle1
-                            )
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            cardItem.timestamp?.let {
+                                Text(
+                                    text = cardItem.timestamp.toString(),
+                                    style = MaterialTheme.typography.subtitle1
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(20.dp))
+                            IconButton(
+                                onClick = {
+                                    navController.navigate("editScreen/$index/${cardItem.timestamp}/${cardItem.emojiEmotion}/${cardItem.primaryEmotion}/${cardItem.secondaryEmotion}/${cardItem.activity}/${cardItem.description}")
+                                },
+                                modifier = Modifier.padding(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit",
+                                    tint = MaterialTheme.colors.secondary
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-//                        Text(
-//                            text = cardItem.,
-//                            style = MaterialTheme.typography.subtitle2,
-//                            color = colorResource(id = R.color.teal_700)
-//                        )
                         Text(
                             text = "Primary emotion: ${cardItem.primaryEmotion}",
                             style = MaterialTheme.typography.subtitle2,
@@ -108,7 +116,7 @@ fun CardList(
                             style = MaterialTheme.typography.subtitle2,
                             color = colorResource(id = R.color.teal_700)
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         cardItem.activity?.let {
                             Text(
                                 text = it,
@@ -118,7 +126,7 @@ fun CardList(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         cardItem.description?.let {
                             Text(
                                 text = it,
@@ -128,21 +136,13 @@ fun CardList(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.weight(1f))
-                    IconButton(
-                        onClick = { /* Handle edit button click event */ },
-                        modifier = Modifier.padding(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit",
-                            tint = MaterialTheme.colors.secondary
-                        )
-                    }
                 }
             }
         }
     }
+
+    Spacer(modifier = Modifier.width(100.dp))
+
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         var selectedItem by remember { mutableStateOf(0) }
@@ -197,8 +197,12 @@ fun CardList(
             )
         }
 
+
+
         FloatingActionButton(
-            onClick = { /* Handle sorting button click event */ },
+            onClick = {
+                isSorted = !isSorted
+            },
             backgroundColor = colorResource(id = R.color.teal_700),
             contentColor = Color.White,
             shape = CircleShape,
@@ -210,6 +214,8 @@ fun CardList(
                 tint = Color.White
             )
         }
+
+
     }
 }
 
@@ -220,12 +226,11 @@ private suspend fun fetchDiaryEntriesFromFirestore(): List<DiaryEntry>? {
         val entries = snapshot.toObjects(DiaryEntry::class.java)
         entries
     } catch (e: Exception) {
-        Log.d("FETCHING FROM FIREBASE" , "not fetched from diaryEntries", e)
-        // Handle any exceptions that
-        // occur during fetching
+        Log.d("FETCHING FROM FIREBASE", "Failed to fetch diaryEntries", e)
         null
     }
 }
+
 
 @Composable
 fun ProvideAppContext(
@@ -237,6 +242,15 @@ fun ProvideAppContext(
         content()
     }
 }
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun sortDiaryEntriesByTimestamp(entries: List<DiaryEntry>): List<DiaryEntry> {
+    Log.d("SORTING", "Sorting function called")
+    return entries.sortedBy { entry ->
+        LocalDate.parse(entry.timestamp, DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+    }
+}
+
 
 
 

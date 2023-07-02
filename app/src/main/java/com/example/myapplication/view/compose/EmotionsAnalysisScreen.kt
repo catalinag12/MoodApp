@@ -65,6 +65,7 @@ fun AnalyzeEmotionScreen(
     var primaryEmotionSaved by remember { mutableStateOf("") }
     var secondaryEmotionSaved by remember { mutableStateOf("") }
     var description by remember { mutableStateOf(TextFieldValue("")) }
+    var index by remember { mutableStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -222,6 +223,7 @@ fun AnalyzeEmotionScreen(
 
                 diaryViewModel.saveDiaryEntry(
                     DiaryEntry(
+                        index,
                         emojiEmotion,
                         activity,
                         primaryEmotionSaved,
@@ -230,6 +232,7 @@ fun AnalyzeEmotionScreen(
                         formattedDate
                 )
                 )
+                index++
             },
             modifier = Modifier
                 .align(CenterHorizontally)
